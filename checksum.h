@@ -8,9 +8,9 @@
 #define MAXLONG 0xFFFFFFFF // max unsigned long
 
 //get CRC value
-unsigned char getCRC(unsigned char* message, int length);
+char getCRC(char* message, int length);
 
 // check if a message contains CRC is valid
-bool isValid(unsigned char* message, int size);
+bool isValid(char* message, int size);
 
 #endif
