@@ -9,10 +9,10 @@
 using namespace std;
 
 //get CRC value
-unsigned char getCRC(unsigned char* message, int length)
+char getCRC(char* message, int length)
 {
   int i, j;
-  unsigned char crc = 0;
+  char crc = 0;
  
   for (i = 0; i < length; i++)
   {
@@ -28,7 +28,7 @@ unsigned char getCRC(unsigned char* message, int length)
 }
 
 // check if a message contains CRC is valid
-bool isValid(unsigned char* message, int size){
+bool isValid(char* message, int size){
 	
 	if (getCRC(message, size))
 		return false;
@@ -36,7 +36,7 @@ bool isValid(unsigned char* message, int size){
 		return true;
 }
 
-/*void dec2bin(int c)
+void dec2bin(int c)
 {
    int i = 0;
    for(i = 31; i >= 0; i--){
@@ -49,7 +49,8 @@ bool isValid(unsigned char* message, int size){
 }
 
 int main(){
-	unsigned char message[3] = {0x83, 0x01, 0x00};
-	message[2] = getCRC(message, 2);
+	char message[3] = {0x83, 0x01, 0x00};
+	message[2] = 0;
+	printf("%d\n",isValid(message, 3));
 	return 0;
-}*/
+}
