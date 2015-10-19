@@ -136,9 +136,9 @@ void moveWindow(){
   while (ACK_array[WINDOW_START]){
     ACK_array[WINDOW_START] = 0;
     WINDOW_START++;
-    WINDOW_START%=WINDOW_MAXLEN;
+    WINDOW_START%=BUFFER_MAXLEN;
     WINDOW_END++;
-    WINDOW_END%=WINDOW_MAXLEN;
+    WINDOW_END%=BUFFER_MAXLEN;
     sent_frame--;
   }
 }
@@ -168,7 +168,7 @@ void prepareSocket(int argc, char *argv[]){
       printf("error: %s\n", errbuf);
       exit(1);
   }
-  
+
   if (regexec(&reg, argv[1],0,NULL,0) != REG_NOMATCH){
       is_ip_address = true;
   }
