@@ -11,6 +11,8 @@
 #include <regex.h>
 #include <time.h>
 
+#include "checksum.h"
+
 #define SOH 1     /*Start of Header Character */
 #define STX 2     /*Start of Text Character */
 #define ETX 3     /*End of Text Character */
@@ -19,7 +21,7 @@
 
 /* Maximum messages length */
 #define DATA_MAXLEN 2 // maximum length of data to be send
-#define ACK_MAXLEN 4 // maximum length of ACK / NAK frame
+#define ACK_MAXLEN 3 // maximum length of ACK / NAK frame
 #define FRAME_MAXLEN (5 + DATA_MAXLEN) // maximum length of data frame to be send
 #define WINDOW_MAXLEN 5 // maximum number of possible sent frame
 #define BUFFER_MAXLEN (WINDOW_MAXLEN * 2) // maximum number of frame buffer
@@ -56,7 +58,7 @@ void prepareFrame(){
   frame_buffer[2] = STX;
   frame_buffer[3] = data_buffer[0];
   frame_buffer[4] = ETX;
-  frame_buffer[5] = getCRC(frame_buffer, FRAME_MAXLEN - 1);
+  frame_buffer[5] = getCRC(frame_buffer, FRAME_MAXLEN - 2);
 
   printf("Frame Buffer to be sent : %x %x %x %x %x %x\n", frame_buffer[0], frame_buffer[1], frame_buffer[2], frame_buffer[3], frame_buffer[4], frame_buffer[5]);
 }
@@ -284,7 +286,7 @@ static void *receiveSignal(void* param){
     } else if (lastSignalRecv == XON) {
         printf("XON diterima.\n");
     } else if (lastSignalRecv == ACK) {
-        if (!isError(_buffer)){
+        if (isValid(_buffer, ACK_MAXLEN)){
           int frameNumber = _buffer[1] - '0';
           printf("ACK diterima dengan nomor frame %d.\n", frameNumber);
           markACK(frameNumber);
@@ -292,7 +294,7 @@ static void *receiveSignal(void* param){
           moveWindow();
         }
     } else if (lastSignalRecv == NAK) {
-        if (!isError(_buffer)){
+        if (isValid(_buffer, ACK_MAXLEN)){
           printf("NAK diterima dengan nomor frame %d.\n", _buffer[1]);
           resendFrame(_buffer[1] - '0');
         }

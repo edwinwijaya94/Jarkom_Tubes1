@@ -36,21 +36,21 @@ bool isValid(char* message, int size){
 		return true;
 }
 
-void dec2bin(int c)
-{
-   int i = 0;
-   for(i = 31; i >= 0; i--){
-     if((c & (1 << i)) != 0){
-       printf("1");
-     }else{
-       printf("0");
-     } 
-   }
-}
+// void dec2bin(int c)
+// {
+//    int i = 0;
+//    for(i = 31; i >= 0; i--){
+//      if((c & (1 << i)) != 0){
+//        printf("1");
+//      }else{
+//        printf("0");
+//      } 
+//    }
+// }
 
-int main(){
-	char message[3] = {0x83, 0x01, 0x00};
-	message[2] = 0;
-	printf("%d\n",isValid(message, 3));
-	return 0;
-}
+// int main(){
+// 	char message[3] = {0x83, 0x01, 0x00};
+// 	message[2] = 0;
+// 	printf("%d\n",isValid(message, 3));
+// 	return 0;
+// }
