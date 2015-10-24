@@ -30,9 +30,8 @@
 #define BUFFER_MAXLEN (WINDOW_MAXLEN * 2) // maximum number of frame buffer
 using namespace std;
 
-char data_buffer[DATA_MAXLEN],
- recv_buffer[BUFFER_MAXLEN],
- frame_buffer[FRAME_MAXLEN];
+char frame_buffer[FRAME_MAXLEN];
+char recv_buffer[BUFFER_MAXLEN][FRAME_MAXLEN];
 
 int WINDOW_START =0;
 int WINDOW_END=(WINDOW_MAXLEN-1);
@@ -60,37 +59,7 @@ void sendACK(char bufferNUM);
 void markBuffer(char bufferNUM);
 void resetMarkBuffer();
 void slideWindow();
-
-void sendACK(int bufferNUM){
-  char ack[ACK_MAXLEN];
-
-  ack[0]=ACK;
-  ack[1]='0'+bufferNUM;
-  ack[2]=getCRC(ack, ACK_MAXLEN-1);
-  sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
-  printf("Mengirim ACK untuk nomor buffer %d\n", bufferNUM);
-}
-
-void resetMarkBuffer(){
-  for(int i=0; i<BUFFER_MAXLEN; i++){
-    markBuffer[i]=0;
-  }
-}
-
-void markBuffer(char bufferNUM){
-  markBuffer[bufferNUM-'0']=1;
-}
-
-void slideWindow(){
-  while(markBuffer[WINDOW_START]){
-    cout<<recv_buffer[WINDOW_START]);
-    WINDOW_START++;
-    WINDOW_START%=BUFFER_MAXLEN;
-    WINDOW_END++;
-    WINDOW_END%=BUFFER_MAXLEN;
-  }
-}
-
+void saveFrame(char*);
 //main program
 int main(int argc, char *argv[])
 {
@@ -167,9 +136,8 @@ static Byte *rcvchar(int sockfd, QTYPE *queue, int *j)
 			printf("xoff signal failed\n");
 	}
 
-	//wait for next chars
-	char temp[1];
-	r = recvfrom(sockfd, temp, RXQSIZE, 0, (struct sockaddr*) &cli_addr, (socklen_t*) &cli_len);
+	//wait for next frame, put into frame_buffer
+	r = recvfrom(sockfd, frame_buffer, FRAME_MAXLEN, 0, (struct sockaddr*) &cli_addr, (socklen_t*) &cli_len);
 
 	//check recvfrom error
 	if(r < 0){
@@ -179,11 +147,28 @@ static Byte *rcvchar(int sockfd, QTYPE *queue, int *j)
 	// check end of file
 	if(int(temp[0]) != Endfile){
 		printf("Menerima byte ke-%d.\n",*j);
-		*j++;
+		
+		//check whether frame is ACK
+		if(isValid(frame_buffer,FRAME_MAXLEN)){
+			*j++;
+			//mark valid frame in recv_buffer
+			markBuffer(frame_buffer[1]);
+			
+			//send ack to transmitter
+			sendACK(frame_buffer[1]);
+			
+			//save frame to recv_buffer
+			saveFrame(frame_buffer);
+		}
+		else{ // frame NAK
+			printf("Frame is not valid\n");
+		}
 	}
-	else
+	else{
 		*j=0; //reset j
-
+		printf("End of file\n");
+	}
+	
 	//update queue attr
 	queue->data[queue->rear]=temp[0]; // add received char to buffer
 	queue->rear = (((queue->rear) + 1) % RXQSIZE + 1) - 1;
@@ -249,4 +234,47 @@ static void *consume(void *param){
 		usleep(DELAY); //delay
 	}
 	pthread_exit(0);
+}
+
+// ACK function
+void sendACK(int bufferNUM){
+  char ack[ACK_MAXLEN];
+
+  ack[0]=ACK;
+  ack[1]='0'+bufferNUM;
+  ack[2]=getCRC(ack, ACK_MAXLEN-1);
+  sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
+  printf("Mengirim ACK untuk nomor buffer %d\n", bufferNUM);
+}
+
+
+void resetMarkBuffer(){
+  for(int i=0; i<BUFFER_MAXLEN; i++){
+    markBuffer[i]=0;
+  }
+}
+
+
+void markBuffer(char bufferNUM){
+  markBuffer[bufferNUM-'0']=1;
+}
+
+void slideWindow(){
+  while(markBuffer[WINDOW_START]){
+    cout<<recv_buffer[WINDOW_START]);
+    WINDOW_START++;
+    WINDOW_START%=BUFFER_MAXLEN;
+    WINDOW_END++;
+    WINDOW_END%=BUFFER_MAXLEN;
+  }
+}
+
+// put ACKed frame to recv_buffer
+void saveFrame(char* frame_buffer){
+	int frame_number = frame_buffer[1];
+	
+	//copy from frame_buffer to recv_buffer
+	for(int i=0; i<FRAME_MAXLEN; i++){
+		recv_buffer[frame_number][i]= frame_buffer[i];
+	}
 }
