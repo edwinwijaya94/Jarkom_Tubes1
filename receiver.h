@@ -44,46 +44,44 @@
 using namespace std;
 
 
-static int WINDOW_START =0;
-static int WINDOW_END=(WINDOW_MAXLEN-1);
-static int mark_buffer[BUFFER_MAXLEN];
 
-static char buffer[2]; //for sending XON/XOFF signal
+
+static char signal_buffer[2]; //for sending XON/XOFF signal
 static struct sockaddr_in serv_addr; //sockaddr for server
 static struct sockaddr_in cli_addr; //sockaddr for client
 static int cli_len= sizeof(cli_addr); // sizeof client address
 
 typedef char FRAME[FRAME_MAXLEN];
 
-typedef struct QTYPE
+typedef struct BUFFER
 {
+	unsigned int WINDOW_START;
+	unsigned int WINDOW_END;
+	unsigned int *mark_buffer;
 	unsigned int count;
-	unsigned int front;
-	unsigned int rear;
 	unsigned int maxsize;
 	FRAME *data;
-} QTYPE;
+} BUFFER;
 
-static FRAME rxbuf[RXQSIZE];
-static QTYPE rcvq = { 0, 0, 0, RXQSIZE, rxbuf };
-static QTYPE *rxq = &rcvq;
+static unsigned int marks[BUFFER_MAXLEN];
+static FRAME recv_buffer[RXQSIZE];
+static BUFFER buffer = { 0, WINDOW_MAXLEN-1, marks, 0, BUFFER_MAXLEN, recv_buffer };
 static unsigned char sent_xonxoff = XON;
 static bool send_xon = true, send_xoff = false;
 
-static FRAME recv_buffer[BUFFER_MAXLEN];
 static FRAME frame;
 /* Socket */
 static int sockfd; // listen on sock_fd
 
 /* Functions declaration */
-void add(QTYPE *queue, FRAME x);
-void del(QTYPE *queue, FRAME *b);
+void add(BUFFER *buffer, FRAME x);
+void del(BUFFER *buffer, FRAME *b);
 void sendACK(char bufferNUM);
 void markBuffer(char bufferNUM);
 void resetMarkBuffer();
 void saveFrame(char*);
-void rcvchar(int sockfd, QTYPE *queue, int *j);
-void q_get(QTYPE *queue, FRAME *current);
+void rcvchar(int sockfd, BUFFER *buffer, int *j);
+void q_get(BUFFER *buffer, FRAME *current);
 void *consume(void *param);
 void slideWindow();
 

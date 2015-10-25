@@ -45,9 +45,9 @@ int main(int argc, char const *argv[]) {
 	// 'RECEIVE' THREAD
 	resetMarkBuffer();
 
-	int j=1;
+	int j=0;
 	while (true) {
-		rcvchar(sockfd, &rcvq, &j);
+		rcvchar(sockfd, &buffer, &j);
 		//delay
 		// usleep(300000);
 		j++;
