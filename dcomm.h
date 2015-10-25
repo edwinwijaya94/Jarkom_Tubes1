@@ -1,8 +1,8 @@
 /*
 * File : dcomm.h
 */
-#ifndef _DCOMM_H_
-#define _DCOMM_H_
+#ifndef DCOMM_H
+#define DCOMM_H
 
 
 /* ASCII Const */
@@ -26,11 +26,4 @@
 #define MAXLEN 1024 /* Maximum messages length */
 typedef unsigned char Byte;
 
-typedef struct QTYPE
-{
-	unsigned int count;
-	unsigned int front;
-	unsigned int rear;
-	unsigned int maxsize;
-	Byte *data;
-} QTYPE;
+#endif

@@ -50,7 +50,6 @@ int sent_frame = 0, last = 0;
 
 using namespace std;
 
-char getCRC(char* message, int size){}
 
 void prepareFrame(){
   frame_buffer[0] = SOH;

@@ -1,121 +1,7 @@
-/*
-* File : T1_rx.cpp
-*/
-#include "dcomm.h"
-#include "checksum.h"
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iostream>
-#include <netdb.h>
-#include <pthread.h>
-
-/* Delay to adjust speed of consuming buffer, in microseconds */
-#define DELAY 100000
-
-/* Define receive buffer size */
-#define RXQSIZE 10
-#define MIN_UPPER 2
-#define MAX_LOWER 2
-#define DATA_MAXLEN 2 // maximum length of data to be send
-#define ACK_MAXLEN 3 // maximum length of ACK / NAK frame
-#define FRAME_MAXLEN (5 + DATA_MAXLEN) // maximum length of data frame to be received
-#define WINDOW_MAXLEN 5 // maximum number of possible received frame
-#define BUFFER_MAXLEN (WINDOW_MAXLEN * 2) // maximum number of frame buffer
+#include "receiver.h"
 using namespace std;
 
-char frame_buffer[FRAME_MAXLEN];
-char recv_buffer[BUFFER_MAXLEN][FRAME_MAXLEN];
-
-int WINDOW_START =0;
-int WINDOW_END=(WINDOW_MAXLEN-1);
-int markBuffer[BUFFER_MAXLEN];
-
-char buffer[2]; //for sending XON/XOFF signal
-struct sockaddr_in serv_addr; //sockaddr for server
-struct sockaddr_in cli_addr; //sockaddr for client
-int cli_len= sizeof(cli_addr); // sizeof client address
-
-Byte rxbuf[RXQSIZE];
-QTYPE rcvq = { 0, 0, 0, RXQSIZE, rxbuf };
-QTYPE *rxq = &rcvq;
-Byte sent_xonxoff = XON;
-bool send_xon = true, send_xoff = false;
-
-/* Socket */
-int sockfd; // listen on sock_fd
-
-/* Functions declaration */
-static Byte *rcvchar(int sockfd, QTYPE *queue, int *j);
-static Byte *q_get(QTYPE *);
-static void *consume(void *param); // Thread functions
-void sendACK(char bufferNUM);
-void markBuffer(char bufferNUM);
-void resetMarkBuffer();
-void slideWindow();
-void saveFrame(char*);
-//main program
-int main(int argc, char *argv[])
-{
-
-	Byte c;
-
-	//create socket
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if(sockfd <0)
-		printf("error socket\n");
-
-	//Insert code here to bind socket to the port number given in argv[1].
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET; //assign as UDP
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); //assign server address
-	serv_addr.sin_port = htons(atoi(argv[1])); //assign port number
-
-	//binding
-	if(bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))< 0)
-		perror("error on binding\n");
-	else
-		printf("Binding pada port: %d\n",atoi(argv[1]));
-
-	/* Initialize XON/XOFF flags */
-	sent_xonxoff = XON;
-
-	/* Create new thread */
-	pthread_t consume_thread;
-
-	// "CONSUME" THREAD
-	if(pthread_create(&consume_thread, NULL, consume, &rcvq)){
-		fprintf(stderr, "Error creating thread\n");
-		return 1;
-	}
-
-	// 'RECEIVE' THREAD
-	int j=1;
-	while (true) {
-		c = *(rcvchar(sockfd, &rcvq, &j));
-
-		//delay
-		// usleep(300000);
-		j++;
-	}
-
-	//join thread
-	if(pthread_join(consume_thread,NULL)){
-		fprintf(stderr,"Error joining thread\n");
-		return 2;
-	}
-
-	return 0;
-}
-
-
-static Byte *rcvchar(int sockfd, QTYPE *queue, int *j)
+void rcvchar(int sockfd, QTYPE *queue, int *j)
 {
 
 	int r; //result of sending signal to server
@@ -137,7 +23,7 @@ static Byte *rcvchar(int sockfd, QTYPE *queue, int *j)
 	}
 
 	//wait for next frame, put into frame_buffer
-	r = recvfrom(sockfd, frame_buffer, FRAME_MAXLEN, 0, (struct sockaddr*) &cli_addr, (socklen_t*) &cli_len);
+	r = recvfrom(sockfd, frame, FRAME_MAXLEN, 0, (struct sockaddr*) &cli_addr, (socklen_t*) &cli_len);
 
 	//check recvfrom error
 	if(r < 0){
@@ -145,55 +31,28 @@ static Byte *rcvchar(int sockfd, QTYPE *queue, int *j)
 	}
 
 	// check end of file
-	if(int(temp[0]) != Endfile){
-		printf("Menerima byte ke-%d.\n",*j);
-		
-		//check whether frame is ACK
-		if(isValid(frame_buffer,FRAME_MAXLEN)){
-			*j++;
-			//mark valid frame in recv_buffer
-			markBuffer(frame_buffer[1]);
-			
-			//send ack to transmitter
-			sendACK(frame_buffer[1]);
-			
-			//save frame to recv_buffer
-			saveFrame(frame_buffer);
-		}
-		else{ // frame NAK
-			printf("Frame is not valid\n");
-		}
+	if(int(frame[3]) != Endfile){
+		printf("Menerima pesan ke-%d.\n",*j);
 	}
 	else{
 		*j=0; //reset j
 		printf("End of file\n");
 	}
-	
-	//update queue attr
-	queue->data[queue->rear]=temp[0]; // add received char to buffer
-	queue->rear = (((queue->rear) + 1) % RXQSIZE + 1) - 1;
-	(queue->count)++;
 
-	return queue->data;
+	//update queue attr
+	add(queue, frame);
 }
 
 /* q_get returns a pointer to the buffer where data is read or NULL if
 * buffer is empty.
 */
-static Byte *q_get(QTYPE *queue)
+void q_get(QTYPE *queue, FRAME *current)
 {
-	Byte *current;
-
-	/* Nothing in the queue */
-	if (!queue->count) {
-		return (NULL);
+	if (queue->count==0) {
+		current=NULL;
+	} else {
+		del(queue, current);
 	}
-
-	current=&queue->data[queue->front];
-
-	//update queue attr
-	queue->front = (((queue->front) + 1) % RXQSIZE + 1) - 1;
-	(queue->count)--;
 
 	//sending XON signal
 	if(queue->count < MAX_LOWER && !send_xon){
@@ -211,24 +70,34 @@ static Byte *q_get(QTYPE *queue)
 		else
 			printf("xon signal failed\n");
 	}
-
-	return current;
 }
 
 // Thread function
-static void *consume(void *param){
-
-	QTYPE *rcvq_ptr = (QTYPE *)param;
+void *consume(void *param){
 
 	int i=1; //character index
 	while (true) {
 
 		/* Call q_get */
-		Byte *res;
-		res = q_get(rcvq_ptr);
-		if(res && (int(*res)>32 || int(*res)==CR || int(*res)==LF || int(*res)==Endfile )){
-			printf("Mengkonsumsi byte ke-%d : %c\n",i,*res);
+		FRAME res;
+		q_get(rxq, &res);
+		if(*res){
+			printf("Error Checking byte ke-%d\n",i);
 			i++;
+			if(isValid(res,FRAME_MAXLEN)){
+				if(res && (int(res[3])>32 || int(res[3])==CR || int(res[3])==LF || int(res[3])==Endfile )){
+					//mark valid frame in recv_buffer
+					markBuffer(res[1]);
+
+					//send ack to transmitter
+					sendACK(res[1]);
+
+					//save frame to recv_buffer
+					saveFrame(res);
+				}
+			}	else { // frame NAK
+				printf("Frame is not valid\n");
+			}
 		}
 		/* Can introduce some delay here. */
 		usleep(DELAY); //delay
@@ -237,31 +106,32 @@ static void *consume(void *param){
 }
 
 // ACK function
-void sendACK(int bufferNUM){
+void sendACK(char bufferNUM){
   char ack[ACK_MAXLEN];
 
   ack[0]=ACK;
-  ack[1]='0'+bufferNUM;
+  ack[1]=bufferNUM;
   ack[2]=getCRC(ack, ACK_MAXLEN-1);
   sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
-  printf("Mengirim ACK untuk nomor buffer %d\n", bufferNUM);
+  printf("Mengirim ACK untuk nomor buffer %c\n", bufferNUM);
 }
 
 
 void resetMarkBuffer(){
   for(int i=0; i<BUFFER_MAXLEN; i++){
-    markBuffer[i]=0;
+    mark_buffer[i]=0;
   }
 }
 
 
 void markBuffer(char bufferNUM){
-  markBuffer[bufferNUM-'0']=1;
+  mark_buffer[bufferNUM-'0']=1;
 }
 
-void slideWindow(){
-  while(markBuffer[WINDOW_START]){
-    cout<<recv_buffer[WINDOW_START]);
+void *slideWindow(void *param){
+  while(mark_buffer[WINDOW_START]){
+    cout<<recv_buffer[WINDOW_START];
+		mark_buffer[WINDOW_START]=0;
     WINDOW_START++;
     WINDOW_START%=BUFFER_MAXLEN;
     WINDOW_END++;
@@ -270,11 +140,51 @@ void slideWindow(){
 }
 
 // put ACKed frame to recv_buffer
-void saveFrame(char* frame_buffer){
-	int frame_number = frame_buffer[1];
-	
-	//copy from frame_buffer to recv_buffer
-	for(int i=0; i<FRAME_MAXLEN; i++){
-		recv_buffer[frame_number][i]= frame_buffer[i];
+void saveFrame(FRAME frame){
+	int frame_number = frame[1];
+	for(int i=0; i<FRAME_MAXLEN; ++i){
+		recv_buffer[frame_number][i]= frame[i];
+	}
+	printf("add to received and valid frame buffer\n");
+}
+
+void add(QTYPE *queue, FRAME x){
+	if(queue->front == (queue->rear+1)%(queue->maxsize))
+	{
+		printf("Circular Queue over flow");
+	}
+	else
+	{
+		if((queue->front ==0) && (queue->rear == 0))
+		{
+			queue->front=queue->rear+1;
+		}
+		queue->rear= (queue->rear+1)%(queue->maxsize);
+		for(int i=0; i<FRAME_MAXLEN; ++i) {
+			queue->data[queue->rear][i]=x[i];
+		}
+		queue->count++;
+	}
+}
+
+void del(QTYPE *queue, FRAME *b){
+	if(queue->front==0 && queue->rear == 0)
+	{
+		printf("Under flow");
+	}
+	else
+	{
+		for(int i=0; i<FRAME_MAXLEN; i++) {
+			*b[i]=queue->data[queue->front][i];
+		}
+		queue->count--;
+		if( queue->front == queue->rear )
+		{
+			queue->front=queue->rear=0;
+		}
+		else
+		{
+			queue->front= (queue->front+1)%(queue->maxsize);
+		}
 	}
 }

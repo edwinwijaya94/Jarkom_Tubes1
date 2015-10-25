@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "checksum.h"
- 
+
 using namespace std;
 
 //get CRC value
@@ -13,7 +13,7 @@ char getCRC(char* message, int length)
 {
   int i, j;
   char crc = 0;
- 
+
   for (i = 0; i < length; i++)
   {
     crc ^= message[i];
@@ -29,7 +29,7 @@ char getCRC(char* message, int length)
 
 // check if a message contains CRC is valid
 bool isValid(char* message, int size){
-	
+
 	if (getCRC(message, size))
 		return false;
 	else
@@ -44,7 +44,7 @@ bool isValid(char* message, int size){
 //        printf("1");
 //      }else{
 //        printf("0");
-//      } 
+//      }
 //    }
 // }
 
