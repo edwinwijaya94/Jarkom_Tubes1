@@ -33,14 +33,28 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 	// check end of file
 	if(int(frame[3]) != Endfile){
 		printf("Menerima frame ke-%d.\n",*j);
+		
+		// check is frame valid
+		if(isValid(frame,FRAME_MAXLEN)){
+			printf("Frame ke-%d valid\n",*j);
+			//mark valid frame in buffer
+			markBuffer(frame[1]);
+
+			//send ack to transmitter
+			sendACK(frame[1]);
+
+			//add frame to buffer.data
+			add(frame);
+			
+		}	
+		else { // frame NAK
+			printf("Frame ke-%d tidak valid !\n");
+		}
 	}
 	else{
 		*j=0; //reset j
-		printf("End of file\n");
+		printf("End of file received !\n");
 	}
-
-	//update BUFFER attr
-	add(buffer, frame);
 }
 
 /* q_get returns a pointer to the buffer where data is read or NULL if
@@ -51,7 +65,9 @@ void q_get(BUFFER *buffer, FRAME *current)
 	if (buffer->count == 0) {
 		current=NULL;
 	} else {
-		del(buffer, current);
+		//del(buffer, current);
+		for(int i=0; i<FRAME_MAXLEN; i++)
+			*current[i] = buffer->data[buffer->WINDOW_START][i];
 	}
 
 	//sending XON signal
@@ -69,38 +85,26 @@ void q_get(BUFFER *buffer, FRAME *current)
 			printf("Buffer < maximum lowerlimit. Mengirim XON.\n");
 		else
 			printf("xon signal failed\n");
+
 	}
 }
 
 // Thread function
 void *consume(void *param){
-
+	printf("Consume called !\n");
 	int i=1; //character index
 	while (true) {
 
 		/* Call q_get */
 		FRAME res;
 		q_get(&buffer, &res);
+		slideWindow(); // print ACKed frame and slide window to right
 		if(*res){
-			//printf("Error Checking byte ke-%d\n",i);
+			//printf("");
 			i++;
-			if(isValid(res,FRAME_MAXLEN)){
-				if(res && (int(res[3])>32 || int(res[3])==CR || int(res[3])==LF || int(res[3])==Endfile )){
-					//mark valid frame in recv_buffer
-					markBuffer(res[1]);
-
-					//send ack to transmitter
-					sendACK(res[1]);
-
-					//save frame to recv_buffer
-					saveFrame(res);
-
-					slideWindow();
-				}
-			}	
-			else { // frame NAK
-				printf("Frame is not valid\n");
-			}
+		}
+		else{
+			//printf("res NULL\n");
 		}
 		/* Can introduce some delay here. */
 		usleep(DELAY); //delay
@@ -128,46 +132,54 @@ void resetMarkBuffer(){
 
 
 void markBuffer(char bufferNUM){
-  buffer.mark_buffer[bufferNUM-'0']=1;
+	//printf("markbuffer\n");
+	buffer.mark_buffer[bufferNUM-'0']=1;
 }
 
 void slideWindow(){
+	
   while(buffer.mark_buffer[buffer.WINDOW_START]){
-    cout<<recv_buffer[buffer.WINDOW_START][3];
-		buffer.mark_buffer[buffer.WINDOW_START]=0;
+    //printf("windowstart=%d\n",buffer.WINDOW_START);
+	cout<<"isi frame ke-"<<buffer.WINDOW_START<<" = "<<buffer.data[buffer.WINDOW_START][3]<<endl;	
+	buffer.mark_buffer[buffer.WINDOW_START]=0;
     buffer.WINDOW_START++;
     buffer.WINDOW_START%=BUFFER_MAXLEN;
     buffer.WINDOW_END++;
     buffer.WINDOW_END%=BUFFER_MAXLEN;
   }
+  //printf("No frame to print\n");
 }
 
 // put ACKed frame to recv_buffer
-void saveFrame(FRAME frame){
+/*void saveFrame(FRAME frame){
 	int frame_number = frame[1];
 	for(int i=0; i<FRAME_MAXLEN; ++i){
 		buffer.data[frame_number][i]= frame[i];
 	}
 	printf("add to received and valid frame buffer\n");
-}
+}*/
 
-void add(BUFFER *buffer, FRAME x){
-	if(buffer->WINDOW_START == (buffer->WINDOW_END+1)%(buffer->maxsize))
+void add(FRAME x){
+	int frame_number = x[1]-'0';
+	for(int i=0; i<FRAME_MAXLEN; i++) {
+		buffer.data[frame_number][i]=x[i];
+	}
+	buffer.count++;
+	
+	/*if(buffer->WINDOW_START == (buffer->WINDOW_END+1)%(buffer->maxsize))
 	{
 		printf("Circular BUFFER over flow\n");
 	}
 	else
 	{
+		printf("add as valid frame to buffer\n");
 		if((buffer->WINDOW_START ==0) && (buffer->WINDOW_END == 0))
 		{
 			buffer->WINDOW_START=buffer->WINDOW_END+1;
 		}
 		buffer->WINDOW_END= (buffer->WINDOW_END+1)%(buffer->maxsize);
-		for(int i=0; i<FRAME_MAXLEN; ++i) {
-			buffer->data[buffer->WINDOW_END][i]=x[i];
-		}
-		buffer->count++;
-	}
+
+	}*/
 }
 
 void del(BUFFER *buffer, FRAME *b){

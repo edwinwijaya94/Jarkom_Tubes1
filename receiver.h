@@ -74,12 +74,12 @@ static FRAME frame;
 static int sockfd; // listen on sock_fd
 
 /* Functions declaration */
-void add(BUFFER *buffer, FRAME x);
+void add(FRAME x);
 void del(BUFFER *buffer, FRAME *b);
 void sendACK(char bufferNUM);
 void markBuffer(char bufferNUM);
 void resetMarkBuffer();
-void saveFrame(char*);
+//void saveFrame(char*);
 void rcvchar(int sockfd, BUFFER *buffer, int *j);
 void q_get(BUFFER *buffer, FRAME *current);
 void *consume(void *param);

@@ -34,8 +34,7 @@ int main(int argc, char const *argv[]) {
 	pthread_t consume_thread;
 
 	// "CONSUME" THREAD
-	rc = pthread_create(&consume_thread, NULL, &consume, NULL);
-		if (rc) {
+		if (pthread_create(&consume_thread, NULL, consume, &buffer)) {
 			printf("ERROR; return code from pthread_create() is %d\n", rc);
 			exit(-1);
 		}
