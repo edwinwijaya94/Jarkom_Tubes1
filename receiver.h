@@ -85,7 +85,7 @@ void saveFrame(char*);
 void rcvchar(int sockfd, QTYPE *queue, int *j);
 void q_get(QTYPE *queue, FRAME *current);
 void *consume(void *param);
-void *slideWindow(void *param);
+void slideWindow();
 
 
 #endif

@@ -50,7 +50,6 @@ int sent_frame = 0, last = 0;
 
 using namespace std;
 
-
 void prepareFrame(){
   frame_buffer[0] = SOH;
   frame_buffer[1] = '0' + last;

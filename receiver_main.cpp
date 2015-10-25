@@ -32,7 +32,6 @@ int main(int argc, char const *argv[]) {
 
 	/* Create new thread */
 	pthread_t consume_thread;
-	pthread_t sliding_thread;
 
 	// "CONSUME" THREAD
 	rc = pthread_create(&consume_thread, NULL, &consume, NULL);
@@ -41,11 +40,6 @@ int main(int argc, char const *argv[]) {
 			exit(-1);
 		}
 
-	sw = pthread_create(&sliding_thread, NULL, &slideWindow, NULL);
-		if (sw) {
-			printf("ERROR; return code from pthread_create() is %d\n", rc);
-			exit(-1);
-		}
 
 
 	// 'RECEIVE' THREAD
@@ -64,11 +58,6 @@ int main(int argc, char const *argv[]) {
 		fprintf(stderr,"Error joining thread\n");
 		return 2;
 	}
-
-  if(pthread_join(sliding_thread,NULL)){
-    fprintf(stderr,"Error joining thread\n");
-    return 2;
-  }
 
 	return 0;
 }

@@ -94,6 +94,8 @@ void *consume(void *param){
 
 					//save frame to recv_buffer
 					saveFrame(res);
+
+					slideWindow();
 				}
 			}	else { // frame NAK
 				printf("Frame is not valid\n");
@@ -128,9 +130,9 @@ void markBuffer(char bufferNUM){
   mark_buffer[bufferNUM-'0']=1;
 }
 
-void *slideWindow(void *param){
+void slideWindow(){
   while(mark_buffer[WINDOW_START]){
-    cout<<recv_buffer[WINDOW_START];
+    cout<<recv_buffer[WINDOW_START][3];
 		mark_buffer[WINDOW_START]=0;
     WINDOW_START++;
     WINDOW_START%=BUFFER_MAXLEN;
