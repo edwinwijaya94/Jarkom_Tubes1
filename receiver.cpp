@@ -41,7 +41,17 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 			markBuffer(frame[1]);
 
 			//send ack to transmitter
-			sendACK(frame[1]);
+			// sendACK(frame[1]);
+			char ack[ACK_MAXLEN];
+
+			ack[0]=ACK;
+			ack[1]=frame[1];
+			ack[2]=getCRC(ack, ACK_MAXLEN-1);
+
+			printf("ack : %x\n", ack);
+
+			sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
+			printf("Mengirim ACK untuk nomor buffer %c\n", frame[1]);
 
 			//add frame to buffer.data
 			add(frame);
@@ -114,13 +124,7 @@ void *consume(void *param){
 
 // ACK function
 void sendACK(char bufferNUM){
-  char ack[ACK_MAXLEN];
-
-  ack[0]=ACK;
-  ack[1]=bufferNUM;
-  ack[2]=getCRC(ack, ACK_MAXLEN-1);
-  sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
-  printf("Mengirim ACK untuk nomor buffer %c\n", bufferNUM);
+  
 }
 
 
@@ -146,6 +150,7 @@ void slideWindow(){
     buffer.WINDOW_START%=BUFFER_MAXLEN;
     buffer.WINDOW_END++;
     buffer.WINDOW_END%=BUFFER_MAXLEN;
+  	buffer.count--;
   }
 }
 

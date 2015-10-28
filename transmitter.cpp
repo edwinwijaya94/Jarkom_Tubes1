@@ -131,13 +131,17 @@ void markACK(char frameNumber){
 }
 
 void moveWindow(){
+  printf("WINDOW_START : %d\n", WINDOW_START);
+  printf("WINDOW_END : %d\n", WINDOW_END);
   while (ACK_array[WINDOW_START]){
     ACK_array[WINDOW_START] = 0;
     WINDOW_START++;
     WINDOW_START%=BUFFER_MAXLEN;
     WINDOW_END++;
     WINDOW_END%=BUFFER_MAXLEN;
+    printf("before sent_frame: %d\n", sent_frame);
     sent_frame--;
+    printf("after sent_frame: %d\n", sent_frame);
   }
 }
 
@@ -234,6 +238,7 @@ int main(int argc, char *argv[]){
   memset(frameTimestamp, '\0', sizeof(frameTimestamp));
 
   while (true){
+    // printf("sent_frame : %d\n", sent_frame);
     if (sent_frame < WINDOW_MAXLEN){
       if (fgets(data_buffer, DATA_MAXLEN, fp) != NULL ) {
         bool xx = false;
@@ -279,6 +284,7 @@ static void *receiveSignal(void* param){
     }
 
     lastSignalRecv = _buffer[0];
+
     if (lastSignalRecv == XOFF) {
         printf("XOFF diterima.\n");
     } else if (lastSignalRecv == XON) {
@@ -287,7 +293,7 @@ static void *receiveSignal(void* param){
         if (isValid(_buffer, ACK_MAXLEN)){
           int frameNumber = _buffer[1] - '0';
           printf("ACK diterima dengan nomor frame %d.\n", frameNumber);
-          markACK(frameNumber);
+          markACK(frameNumber + '0');
           removeFrameTimestamp(frameNumber);
           moveWindow();
         }
