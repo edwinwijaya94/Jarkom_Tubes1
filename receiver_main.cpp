@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 using namespace std;
 
@@ -107,9 +108,9 @@ void *consume(void *param){
 
 				ack[0]=ACK;
 				ack[1]=temp_frame[1];
-				ack[2]=getCRC(ack, ACK_MAXLEN-1);
+				ack[2]=getCRC(ack,2);
 
-				printf("ack : %x\n", ack);
+				printf("ack : %s\n", ack);
 
 				ssize_t temp = sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
 				printf("sendto : %d\n", temp);

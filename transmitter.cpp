@@ -274,7 +274,7 @@ static void *receiveSignal(void* param){
 
     char _buffer[ACK_MAXLEN];
 
-    n = recvfrom(sockfd,_buffer,strlen(_buffer),0,(struct sockaddr *)&serv_addr,(socklen_t*) &serv_len);
+    n = recvfrom(sockfd,_buffer,ACK_MAXLEN,0,(struct sockaddr *)&serv_addr,(socklen_t*) &serv_len);
     // buffer[n]=0;
     // fputs(_buffer,stdout);
 
@@ -284,13 +284,14 @@ static void *receiveSignal(void* param){
     }
 
     lastSignalRecv = _buffer[0];
-    printf("signal : %x\n",_buffer);
+    printf("signal : %s\n",_buffer);
 
     if (lastSignalRecv == XOFF) {
         printf("XOFF diterima.\n");
     } else if (lastSignalRecv == XON) {
         printf("XON diterima.\n");
     } else if (lastSignalRecv == ACK) {
+		printf("terima ack = %c\n",_buffer[0]);
         if (isValid(_buffer, ACK_MAXLEN)){
           int frameNumber = _buffer[1] - '0';
           printf("ACK diterima dengan nomor frame %d.\n", frameNumber);
