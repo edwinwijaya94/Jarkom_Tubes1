@@ -169,7 +169,7 @@ void add(FRAME x){
 	}
 	else
 	{
-		printf("add as valid frame to buffer. WINDOW_START = %d\n",buffer.WINDOW_START);
+		printf("add as valid frame to buffer\n");
 		if((buffer.WINDOW_START ==0) && (buffer.WINDOW_END == 0))
 		{
 			buffer.WINDOW_START=buffer.WINDOW_END+1;
@@ -177,7 +177,7 @@ void add(FRAME x){
 
 		int frame_number = x[1]-'0';
 		for(int i=0; i<FRAME_MAXLEN; i++) {
-			buffer.data[(buffer.WINDOW_START + frame_number) % BUFFER_MAXLEN][i]=x[i];
+			buffer.data[frame_number % BUFFER_MAXLEN][i]=x[i];
 		}
 
 		//mark valid frame in buffer
