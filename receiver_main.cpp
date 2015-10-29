@@ -45,10 +45,10 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 
 	// check end of file
 	if(int(frame[3]) != Endfile){
-		printf("Menerima frame ke-%d.\n",*j);
+		printf("Menerima frame ke-%d.\n",frame[1]-'0');
 	}
 	else{
-		*j=0; //reset j
+		//*j=0; //reset j
 		printf("End of file received !\n");
 	}
 }
@@ -155,6 +155,12 @@ void slideWindow(){
     printf("windowend=%d\n",buffer.WINDOW_END);
 	cout<<"isi frame ke-"<<buffer.WINDOW_START<<" = "<<buffer.data[buffer.WINDOW_START][3]<<endl;	
 	buffer.mark_buffer[buffer.WINDOW_START]=0;
+    
+    printf("after un-mark buffer\n");
+	for(int j=0; j<BUFFER_MAXLEN; j++)
+		printf("%d",buffer.mark_buffer[j]);
+	printf("\n");
+    
     buffer.WINDOW_START++;
     buffer.WINDOW_START%=BUFFER_MAXLEN;
     buffer.WINDOW_END++;
@@ -164,30 +170,8 @@ void slideWindow(){
   }
 }
 
-// put ACKed frame to recv_buffer
-/*void saveFrame(FRAME frame){
-	int frame_number = frame[1];
-	for(int i=0; i<FRAME_MAXLEN; ++i){
-		buffer.data[frame_number][i]= frame[i];
-	}
-	printf("add to received and valid frame buffer\n");
-}*/
 
 void add(FRAME x){
-	
-	/*printf("add as valid frame to buffer\n");
-	if((buffer.WINDOW_START ==0) && (buffer.WINDOW_END == 0))
-	{
-		buffer.WINDOW_START=buffer.WINDOW_END+1;
-	}
-	
-	int frame_number = x[1]-'0';
-	for(int i=0; i<FRAME_MAXLEN; i++) {
-		buffer.data[frame_number][i]=x[i];
-	}
-	buffer.count++;
-	
-	buffer.WINDOW_END= (buffer.WINDOW_END+1)%(buffer.maxsize);*/
 		
 	if(buffer.count == BUFFER_MAXLEN)
 	{
@@ -204,11 +188,11 @@ void add(FRAME x){
 		
 		int frame_number = x[1]-'0';
 		for(int i=0; i<FRAME_MAXLEN; i++) {
-			buffer.data[(buffer.WINDOW_START + frame_number) % BUFFER_MAXLEN][i]=x[i];
+			buffer.data[frame_number % BUFFER_MAXLEN][i]=x[i];
 		}
 		
 		//mark valid frame in buffer
-		markBuffer(((buffer.WINDOW_START + frame_number) % BUFFER_MAXLEN)+'0');
+		markBuffer((frame_number % BUFFER_MAXLEN)+'0');
 		printf("after mark buffer\n");
 		for(int j=0; j<BUFFER_MAXLEN; j++)
 			printf("%d",buffer.mark_buffer[j]);
@@ -216,7 +200,7 @@ void add(FRAME x){
 		
 		buffer.count++;
 		printf("count after add = %d\n",buffer.count);
-		buffer.WINDOW_END= (buffer.WINDOW_END+1)%(BUFFER_MAXLEN);
+		//buffer.WINDOW_END= (buffer.WINDOW_END+1)%(BUFFER_MAXLEN);
 		
 		printf("after add:\n");
 		for(int i=0; i<BUFFER_MAXLEN; i++){
