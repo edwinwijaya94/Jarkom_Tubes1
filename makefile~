@@ -1,4 +1,9 @@
 all: ./checksum.cpp ./receiver_main.cpp ./receiver.cpp ./transmitter.cpp
-	g++ -o receiver.out checksum.cpp receiver.cpp receiver_main.cpp -pthread
+<<<<<<< HEAD
+	g++ -o receiver.out checksum.cpp receiver.cpp receiver_main.cpp -lpthread
+	g++ -o ./transmitter.out checksum.cpp transmitter.cpp -lpthread -std=c++11
+=======
+	g++ -o receiver.out checksum.cpp receiver_main.cpp -pthread
 	g++ -o ./transmitter.out checksum.cpp transmitter.cpp -pthread -std=c++11
+>>>>>>> 812f16a0eb8c3f7dff08dc2fc2e027ec3c9ded67
 	
