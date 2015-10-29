@@ -96,13 +96,11 @@ void *consume(void *param){
 			if(isValid(temp_frame,FRAME_MAXLEN)){
 				
 				printf("Frame ke-%d valid\n",temp_frame[1]-'0');
-				//mark valid frame in buffer
-				markBuffer(temp_frame[1]);
 
 				//send ack to transmitter
 				// sendACK(frame[1]);
 				char ack[ACK_MAXLEN];
-
+				
 				ack[0]=ACK;
 				ack[1]=temp_frame[1];
 				ack[2]=getCRC(ack,2);
@@ -153,7 +151,8 @@ void markBuffer(char bufferNUM){
 void slideWindow(){
 	
   while(buffer.mark_buffer[buffer.WINDOW_START]){
-    //printf("windowstart=%d\n",buffer.WINDOW_START);
+	printf("windowstart=%d\n",buffer.WINDOW_START);
+    printf("windowend=%d\n",buffer.WINDOW_END);
 	cout<<"isi frame ke-"<<buffer.WINDOW_START<<" = "<<buffer.data[buffer.WINDOW_START][3]<<endl;	
 	buffer.mark_buffer[buffer.WINDOW_START]=0;
     buffer.WINDOW_START++;
@@ -161,6 +160,7 @@ void slideWindow(){
     buffer.WINDOW_END++;
     buffer.WINDOW_END%=BUFFER_MAXLEN;
   	buffer.count--;
+  	printf("count after slides :%d\n",buffer.count);
   }
 }
 
@@ -196,6 +196,7 @@ void add(FRAME x){
 	else
 	{
 		printf("add as valid frame to buffer\n");
+		printf("add_windowstart=%d\n",buffer.WINDOW_START);
 		if((buffer.WINDOW_START ==0) && (buffer.WINDOW_END == 0))
 		{
 			buffer.WINDOW_START=buffer.WINDOW_END+1;
@@ -203,11 +204,26 @@ void add(FRAME x){
 		
 		int frame_number = x[1]-'0';
 		for(int i=0; i<FRAME_MAXLEN; i++) {
-			buffer.data[frame_number][i]=x[i];
+			buffer.data[(buffer.WINDOW_START + frame_number) % BUFFER_MAXLEN][i]=x[i];
 		}
-		buffer.count++;
 		
+		//mark valid frame in buffer
+		markBuffer(((buffer.WINDOW_START + frame_number) % BUFFER_MAXLEN)+'0');
+		printf("after mark buffer\n");
+		for(int j=0; j<BUFFER_MAXLEN; j++)
+			printf("%d",buffer.mark_buffer[j]);
+		printf("\n");
+		
+		buffer.count++;
+		printf("count after add = %d\n",buffer.count);
 		buffer.WINDOW_END= (buffer.WINDOW_END+1)%(BUFFER_MAXLEN);
+		
+		printf("after add:\n");
+		for(int i=0; i<BUFFER_MAXLEN; i++){
+			printf("%c",buffer.data[i][3]);
+		}
+		printf("\n");
+	
 	}
 }
 
