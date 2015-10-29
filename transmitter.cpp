@@ -284,7 +284,7 @@ static void *receiveSignal(void* param){
     }
 
     lastSignalRecv = _buffer[0];
-    printf("signal : %s\n",_buffer);
+    printf("signal : %x\n",_buffer);
 
     if (lastSignalRecv == XOFF) {
         printf("XOFF diterima.\n");

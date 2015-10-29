@@ -78,7 +78,7 @@ static int sockfd; // listen on sock_fd
 /* Functions declaration */
 void add(FRAME x);
 void del(BUFFER *buffer, FRAME *b);
-void sendACK(char bufferNUM);
+//void sendACK(char bufferNUM);
 void markBuffer(char bufferNUM);
 void resetMarkBuffer();
 //void saveFrame(char*);

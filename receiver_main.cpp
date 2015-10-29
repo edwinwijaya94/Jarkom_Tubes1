@@ -46,8 +46,6 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 	// check end of file
 	if(int(frame[3]) != Endfile){
 		printf("Menerima frame ke-%d.\n",*j);
-
-		
 	}
 	else{
 		*j=0; //reset j
@@ -58,46 +56,45 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 /* q_get returns a pointer to the buffer where data is read or NULL if
 * buffer is empty.
 */
-void q_get(BUFFER *buffer, FRAME *current)
+void *q_get(void *param)
 {
-	if (buffer->count == 0) {
-		current=NULL;
-	} else {
-		//del(buffer, current);
-		for(int i=0; i<FRAME_MAXLEN; i++)
-			*current[i] = buffer->data[buffer->WINDOW_START][i];
-	}
+	while(true){
+		slideWindow();
 
-	//sending XON signal
-	if(buffer->count < MAX_LOWER && !send_xon){
-		send_xon = true; //set xon flag
-		send_xoff = false; //set xoff flag
-		sent_xonxoff= XON;
+		//sending XON signal
+		if(buffer.count < BUFFER_MAXLEN && !send_xon){
+			send_xon = true; //set xon flag
+			send_xoff = false; //set xoff flag
+			sent_xonxoff= XON;
 
-		int r;
-		signal_buffer[0]=sent_xonxoff;
-		r = sendto(sockfd, signal_buffer, strlen(signal_buffer), 0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+			int r;
+			signal_buffer[0]=sent_xonxoff;
+			r = sendto(sockfd, signal_buffer, strlen(signal_buffer), 0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
 
-		//check error on signal
-		if(r>0)
-			printf("Buffer < maximum lowerlimit. Mengirim XON.\n");
-		else
-			printf("xon signal failed\n");
+			//check error on signal
+			if(r>0)
+				printf("Mengirim XON.\n");
+			else
+				printf("xon signal failed\n");
 
+		}
 	}
 }
 
 // Thread function
 void *consume(void *param){
-	printf("Consume called !\n");
-	int i=1; //character index
+	//int i=1; //character index
 	while (true) {
+		//slideWindow(); // print ACKed frame and slide window to right
 		while(temp_count){
 		// check is frame valid
 			FRAME temp_frame;
 			strcpy(temp_frame,temp_buffer[check_index]); 
+			check_index  = (check_index +1) % BUFFER_MAXLEN;
+			temp_count--;
+			
 			if(isValid(temp_frame,FRAME_MAXLEN)){
-				temp_count--;
+				
 				printf("Frame ke-%d valid\n",temp_frame[1]-'0');
 				//mark valid frame in buffer
 				markBuffer(temp_frame[1]);
@@ -110,7 +107,7 @@ void *consume(void *param){
 				ack[1]=temp_frame[1];
 				ack[2]=getCRC(ack,2);
 
-				printf("ack : %s\n", ack);
+				printf("ack : %x\n", ack);
 
 				ssize_t temp = sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
 				printf("sendto : %d\n", temp);
@@ -120,39 +117,25 @@ void *consume(void *param){
 				strerror_r( errno, msg_buff, 100 );
 				printf("error message : %s\n", msg_buff);
 
-				printf("Mengirim ACK untuk nomor buffer %c\n", temp_frame[1]);
+				printf("Mengirim ACK untuk nomor frame %c\n", temp_frame[1]);
 
 				//add frame to buffer.data
 				add(temp_frame);
 			}	
 			else { // frame NAK
-				temp_count--;
 				printf("Frame ke-%d tidak valid !\n");
 			}
-			check_index = (check_index+1) %BUFFER_MAXLEN;  
 		}
 
-		/* Call q_get */
-		//FRAME res;
-		//q_get(&buffer, &res);
-		slideWindow(); // print ACKed frame and slide window to right
-		/*if(*res){
-			//printf("");
-			i++;
-		}
-		else{
-			//printf("res NULL\n");
-		}*/
-		/* Can introduce some delay here. */
-		usleep(DELAY); //delay
+		//usleep(DELAY); //delay
 	}
 	pthread_exit(0);
 }
 
 // ACK function
-void sendACK(char bufferNUM){
+/*void sendACK(char bufferNUM){
   
-}
+}*/
 
 
 void resetMarkBuffer(){
@@ -206,9 +189,9 @@ void add(FRAME x){
 	
 	buffer.WINDOW_END= (buffer.WINDOW_END+1)%(buffer.maxsize);*/
 		
-	if(buffer.WINDOW_START == (buffer.WINDOW_END+1)%(buffer.maxsize))
+	if(buffer.count == BUFFER_MAXLEN)
 	{
-		printf("Circular BUFFER over flow\n");
+		printf("Circular BUFFER full\n");
 	}
 	else
 	{
@@ -224,7 +207,7 @@ void add(FRAME x){
 		}
 		buffer.count++;
 		
-		buffer.WINDOW_END= (buffer.WINDOW_END+1)%(buffer.maxsize);
+		buffer.WINDOW_END= (buffer.WINDOW_END+1)%(BUFFER_MAXLEN);
 	}
 }
 
@@ -278,9 +261,16 @@ int main(int argc, char const *argv[]) {
 
 	/* Create new thread */
 	pthread_t consume_thread;
+	pthread_t slide_thread;
 
 	// "CONSUME" THREAD
 	if (pthread_create(&consume_thread, NULL, consume, &buffer)) {
+		printf("ERROR; return code from pthread_create() is %d\n", rc);
+		exit(-1);
+	}
+	
+	// "SLIDE WINDOW" THREAD
+	if (pthread_create(&slide_thread, NULL, q_get, &buffer)) {
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
 		exit(-1);
 	}
@@ -298,6 +288,11 @@ int main(int argc, char const *argv[]) {
 
 	//join thread
 	if(pthread_join(consume_thread,NULL)){
+		fprintf(stderr,"Error joining thread\n");
+		return 2;
+	}
+	
+	if(pthread_join(slide_thread,NULL)){
 		fprintf(stderr,"Error joining thread\n");
 		return 2;
 	}
