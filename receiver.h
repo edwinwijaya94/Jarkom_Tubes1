@@ -69,6 +69,8 @@ static BUFFER buffer = { 0, WINDOW_MAXLEN-1, marks, 0, BUFFER_MAXLEN, recv_buffe
 static unsigned char sent_xonxoff = XON;
 static bool send_xon = true, send_xoff = false;
 
+static FRAME temp_buffer[BUFFER_MAXLEN];
+
 static FRAME frame;
 /* Socket */
 static int sockfd; // listen on sock_fd

@@ -1,11 +1,15 @@
 #include "receiver.h"
 using namespace std;
 
+int temp_index = 0;
+int check_index = 0;
+int temp_count = 0;
+
 void rcvchar(int sockfd, BUFFER *buffer, int *j)
 {
 
 	int r; //result of sending signal to server
-	if(buffer->count > MIN_UPPER && !send_xoff){ // buffer full, sent xoff
+	if(temp_count == BUFFER_MAXLEN && !send_xoff){ // buffer full, sent xoff
 		send_xon = false; //set xon flag
 		send_xoff = true; //set xoff flag
 		sent_xonxoff = XOFF; //assign signal
@@ -25,6 +29,10 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 	//wait for next frame, put into frame_buffer
 	r = recvfrom(sockfd, frame, FRAME_MAXLEN, 0, (struct sockaddr*) &cli_addr, (socklen_t*) &cli_len);
 
+	strcpy(temp_buffer[temp_index], frame);
+	temp_index = (temp_index+1)%BUFFER_MAXLEN;
+	temp_count++;
+	
 	//check recvfrom error
 	if(r < 0){
 		printf("error recvfrom\n");
@@ -33,33 +41,8 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 	// check end of file
 	if(int(frame[3]) != Endfile){
 		printf("Menerima frame ke-%d.\n",*j);
+
 		
-		// check is frame valid
-		if(isValid(frame,FRAME_MAXLEN)){
-			printf("Frame ke-%d valid\n",*j);
-			//mark valid frame in buffer
-			markBuffer(frame[1]);
-
-			//send ack to transmitter
-			// sendACK(frame[1]);
-			char ack[ACK_MAXLEN];
-
-			ack[0]=ACK;
-			ack[1]=frame[1];
-			ack[2]=getCRC(ack, ACK_MAXLEN-1);
-
-			printf("ack : %x\n", ack);
-
-			sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
-			printf("Mengirim ACK untuk nomor buffer %c\n", frame[1]);
-
-			//add frame to buffer.data
-			add(frame);
-			
-		}	
-		else { // frame NAK
-			printf("Frame ke-%d tidak valid !\n");
-		}
 	}
 	else{
 		*j=0; //reset j
@@ -104,18 +87,50 @@ void *consume(void *param){
 	printf("Consume called !\n");
 	int i=1; //character index
 	while (true) {
+		while(temp_count){
+		// check is frame valid
+			FRAME temp_frame;
+			strcpy(temp_frame,temp_buffer[check_index]); 
+			if(isValid(temp_frame,FRAME_MAXLEN)){
+				temp_count--;
+				printf("Frame ke-%d valid\n",temp_frame[1]-'0');
+				//mark valid frame in buffer
+				markBuffer(temp_frame[1]);
+
+				//send ack to transmitter
+				// sendACK(frame[1]);
+				char ack[ACK_MAXLEN];
+
+				ack[0]=ACK;
+				ack[1]=temp_frame[1];
+				ack[2]=getCRC(ack, ACK_MAXLEN-1);
+
+				printf("ack : %x\n", ack);
+
+				sendto(sockfd, ack, sizeof ack,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
+				printf("Mengirim ACK untuk nomor buffer %c\n", temp_frame[1]);
+
+				//add frame to buffer.data
+				add(temp_frame);
+			}	
+			else { // frame NAK
+				temp_count--;
+				printf("Frame ke-%d tidak valid !\n");
+			}
+			check_index = (check_index+1) %BUFFER_MAXLEN;  
+		}
 
 		/* Call q_get */
-		FRAME res;
-		q_get(&buffer, &res);
+		//FRAME res;
+		//q_get(&buffer, &res);
 		slideWindow(); // print ACKed frame and slide window to right
-		if(*res){
+		/*if(*res){
 			//printf("");
 			i++;
 		}
 		else{
 			//printf("res NULL\n");
-		}
+		}*/
 		/* Can introduce some delay here. */
 		usleep(DELAY); //delay
 	}
