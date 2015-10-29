@@ -65,7 +65,7 @@ typedef struct BUFFER
 
 static unsigned int marks[BUFFER_MAXLEN];
 static FRAME recv_buffer[RXQSIZE];
-static BUFFER buffer = { 0, WINDOW_MAXLEN-1, marks, 0, BUFFER_MAXLEN, recv_buffer };
+static BUFFER buffer = { 0, 4, marks, 0, BUFFER_MAXLEN, recv_buffer };
 static unsigned char sent_xonxoff = XON;
 static bool send_xon = true, send_xoff = false;
 
