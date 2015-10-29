@@ -107,7 +107,14 @@ void *consume(void *param){
 
 				printf("ack : %x\n", ack);
 
-				sendto(sockfd, ack, sizeof ack,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
+				ssize_t temp = sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
+				printf("sendto : %d\n", temp);
+
+				char msg_buff[100];
+
+				strerror_r( errno, msg_buff, 100 );
+				printf("error message : %s\n", msg_buff);
+
 				printf("Mengirim ACK untuk nomor buffer %c\n", temp_frame[1]);
 
 				//add frame to buffer.data
