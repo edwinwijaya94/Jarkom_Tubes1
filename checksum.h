@@ -2,7 +2,7 @@
 #define _CHECKSUM_H_
 
 // CRC polynomial
-#define CRC8 0xD5
+#define CRC8 0x83
 
 // MAX LONG
 #define MAXLONG 0xFFFFFFFF // max unsigned long
