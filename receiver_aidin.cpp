@@ -45,7 +45,7 @@ void rcvchar(int sockfd, BUFFER *buffer, int *j)
 
 	// check end of file
 	if(int(frame[3]) != Endfile){
-		printf("Menerima frame ke-%d.\n",*j);
+		printf("\nMenerima pesan ke %d.\n",*j);
 	}
 	else{
 		*j=0; //reset j
@@ -95,7 +95,7 @@ void *consume(void *param){
 
 			if(isValid(temp_frame,FRAME_MAXLEN)){
 
-				printf("Frame ke-%d valid\n",temp_frame[1]-'0');
+				printf("\nFrame dengan nomor %d valid\n" ,temp_frame[1]-'0');
 
 				//send ack to transmitter
 				// sendACK(frame[1]);
@@ -105,17 +105,17 @@ void *consume(void *param){
 				ack[1]=temp_frame[1];
 				ack[2]=getCRC(ack,2);
 
-				printf("ack : %x\n", ack);
+				//printf("ack : %x\n", ack);
 
 				ssize_t temp = sendto(sockfd, ack, ACK_MAXLEN,0,(struct sockaddr *)&cli_addr, sizeof(cli_addr));
-				printf("sendto : %d\n", temp);
+				//printf("sendto : %d\n", temp);
 
 				char msg_buff[100];
 
 				strerror_r( errno, msg_buff, 100 );
-				printf("error message : %s\n", msg_buff);
+				//printf("error message : %s\n", msg_buff);
 
-				printf("Mengirim ACK untuk nomor frame %c\n", temp_frame[1]);
+				printf("\nMengirim ACK untuk nomor frame %c\n", temp_frame[1]);
 
 				//add frame to buffer.data
 				if(buffer.data[0+temp_frame[1]][3]!=temp_frame[3]){
@@ -123,7 +123,7 @@ void *consume(void *param){
 				}
 			}
 			else { // frame NAK
-				printf("Frame ke-%d tidak valid !\n");
+				printf("\nFrame ke %d tidak valid !\n",temp_frame[1]-'0');
 			}
 		}
 
@@ -151,9 +151,8 @@ void markBuffer(char bufferNUM){
 }
 
 void slideWindow(){
-  if(buffer.mark_buffer[buffer.WINDOW_START]){
-		printf("windowstart=%d\n",buffer.WINDOW_START);
-    printf("windowend=%d\n",buffer.WINDOW_END);
+  if(buffer.mark_buffer[buffer.WINDOW_START]==1){
+		printf("\nWINDOW_START : %d WINDOW_END : %d\n", buffer.WINDOW_START, buffer.WINDOW_END);
 		cout<<"isi frame ke-"<<buffer.WINDOW_START<<" = "<<buffer.data[buffer.WINDOW_START][3]<<endl;
 		buffer.mark_buffer[buffer.WINDOW_START]=0;
     buffer.WINDOW_START++;
@@ -161,7 +160,7 @@ void slideWindow(){
     buffer.WINDOW_END++;
     buffer.WINDOW_END%=BUFFER_MAXLEN;
   	buffer.count--;
-  	printf("count after slides :%d\n",buffer.count);
+  	printf("\ncount after slides :%d\n",buffer.count);
   }
 }
 
@@ -174,8 +173,8 @@ void add(FRAME x){
 	}
 	else
 	{
-		printf("add as valid frame to buffer\n");
-		printf("add_windowstart=%d\n",buffer.WINDOW_START);
+		//printf("add as valid frame to buffer\n");
+		//printf("add_windowstart=%d\n",buffer.WINDOW_START);
 		if((buffer.WINDOW_START ==0) && (buffer.WINDOW_END == 0))
 		{
 			buffer.WINDOW_START=buffer.WINDOW_END+1;
@@ -188,14 +187,14 @@ void add(FRAME x){
 
 		//mark valid frame in buffer
 		markBuffer(x[1]);
-		printf("after mark buffer\n");
+		//printf("after mark buffer\n");
 		for(int j=0; j<BUFFER_MAXLEN; j++)
 			printf("%d",buffer.mark_buffer[j]);
 		printf("\n");
 
 		buffer.count++;
-		printf("count after add = %d\n",buffer.count);
-		printf("after add:\n");
+		//printf("count after add = %d\n",buffer.count);
+		//printf("after add:\n");
 		for(int i=0; i<BUFFER_MAXLEN; i++){
 			printf("%c",buffer.data[i][3]);
 		}
