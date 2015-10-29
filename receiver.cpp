@@ -165,6 +165,20 @@ void slideWindow(){
 
 void add(FRAME x){
 	
+	/*printf("add as valid frame to buffer\n");
+	if((buffer.WINDOW_START ==0) && (buffer.WINDOW_END == 0))
+	{
+		buffer.WINDOW_START=buffer.WINDOW_END+1;
+	}
+	
+	int frame_number = x[1]-'0';
+	for(int i=0; i<FRAME_MAXLEN; i++) {
+		buffer.data[frame_number][i]=x[i];
+	}
+	buffer.count++;
+	
+	buffer.WINDOW_END= (buffer.WINDOW_END+1)%(buffer.maxsize);*/
+		
 	if(buffer.WINDOW_START == (buffer.WINDOW_END+1)%(buffer.maxsize))
 	{
 		printf("Circular BUFFER over flow\n");
