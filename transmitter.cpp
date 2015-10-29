@@ -58,7 +58,7 @@ void prepareFrame(){
   frame_buffer[4] = ETX;
   frame_buffer[5] = getCRC(frame_buffer, FRAME_MAXLEN - 2);
 
-  printf("Frame Buffer to be sent : %x %x %x %x %x %x\n", frame_buffer[0], frame_buffer[1], frame_buffer[2], frame_buffer[3], frame_buffer[4], frame_buffer[5]);
+  // printf("Frame Buffer to be sent : %x %x %x %x %x %x\n", frame_buffer[0], frame_buffer[1], frame_buffer[2], frame_buffer[3], frame_buffer[4], frame_buffer[5]);
 }
 
 void markFrameTimestamp(){
@@ -103,7 +103,7 @@ void sendFrame(){
 
   // printCacheBuffer();
 
-  printf("Frame - %d , Mengirim byte ke-%d: '%x'\n", frameNumber, counter, frame_buffer[3]);
+  printf("Frame - %d , Mengirim byte ke-%d: '%c'\n", frameNumber, counter, frame_buffer[3]);
 
   sendto(sockfd,frame_buffer, strlen(frame_buffer),0,(struct sockaddr *)&serv_addr,sizeof(serv_addr));
 }
@@ -113,7 +113,7 @@ void sendFrameData(){
   sendFrame();
 
   last++;
-  last%=WINDOW_MAXLEN;
+  last%=BUFFER_MAXLEN;
 }
 
 void resendFrame(int frameNumber){
@@ -131,17 +131,16 @@ void markACK(char frameNumber){
 }
 
 void moveWindow(){
-  printf("WINDOW_START : %d\n", WINDOW_START);
-  printf("WINDOW_END : %d\n", WINDOW_END);
   while (ACK_array[WINDOW_START]){
     ACK_array[WINDOW_START] = 0;
     WINDOW_START++;
     WINDOW_START%=BUFFER_MAXLEN;
     WINDOW_END++;
     WINDOW_END%=BUFFER_MAXLEN;
-    printf("before sent_frame: %d\n", sent_frame);
+    int temp = sent_frame;
     sent_frame--;
-    printf("after sent_frame: %d\n", sent_frame);
+    printf("Sent_frame: %d -> %d\n", temp, sent_frame);
+    printf("WINDOW_START : %d WINDOW_END : %d\n", WINDOW_START, WINDOW_END);
   }
 }
 
@@ -251,6 +250,7 @@ int main(int argc, char *argv[]){
 
         sendFrameData();
         sent_frame++;
+        printf("Adding Sent Frame to %d\n", sent_frame);
 
         bzero(data_buffer, DATA_MAXLEN);
         counter++;
@@ -284,14 +284,14 @@ static void *receiveSignal(void* param){
     }
 
     lastSignalRecv = _buffer[0];
-    printf("signal : %x\n",_buffer);
+    // printf("signal : %x\n",_buffer);
 
     if (lastSignalRecv == XOFF) {
         printf("XOFF diterima.\n");
     } else if (lastSignalRecv == XON) {
         printf("XON diterima.\n");
     } else if (lastSignalRecv == ACK) {
-		printf("terima ack = %c\n",_buffer[0]);
+		// printf("terima ack = %c\n",_buffer[0]);
         if (isValid(_buffer, ACK_MAXLEN)){
           int frameNumber = _buffer[1] - '0';
           printf("ACK diterima dengan nomor frame %d.\n", frameNumber);
@@ -305,6 +305,13 @@ static void *receiveSignal(void* param){
           resendFrame(_buffer[1] - '0');
         }
     }
+
+    printf("\nACK ARRAY : \n");
+    for (int i=0;i<BUFFER_MAXLEN;i++){
+      printf("%d ", ACK_array[i]);
+    }
+
+    printf("\n\n");
   }
   printf("Exiting child...\n");
   pthread_exit(0);
