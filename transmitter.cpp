@@ -58,7 +58,7 @@ void prepareFrame(){
   frame_buffer[4] = ETX;
   frame_buffer[5] = getCRC(frame_buffer, FRAME_MAXLEN - 2);
 
-  // printf("Frame Buffer to be sent : %x %x %x %x %x %x\n", frame_buffer[0], frame_buffer[1], frame_buffer[2], frame_buffer[3], frame_buffer[4], frame_buffer[5]);
+  // printf("Frame - %d to be sent : %x %x %x %x %x %x\n", last, frame_buffer[0], frame_buffer[1], frame_buffer[2], frame_buffer[3], frame_buffer[4], frame_buffer[5]);
 }
 
 void markFrameTimestamp(){
@@ -76,11 +76,11 @@ void printTimestamp(){
 }
 
 void printCacheBuffer(){
-  printf("\n------------------\n");
+  printf("\n\n------------------\n");
   for (int i=0;i<WINDOW_MAXLEN;i++){
     printf("Cache Buffer for Frame - %d : '%x %x %x %x %x %x'\n", i, cache_buffer[i][0], cache_buffer[i][1], cache_buffer[i][2], cache_buffer[i][3], cache_buffer[i][4], cache_buffer[i][5]);
   }
-  printf("------------------\n");
+  printf("------------------\n\n");
 }
 
 void removeFrameTimestamp(int frameNumber){
@@ -137,6 +137,7 @@ void moveWindow(){
     WINDOW_START%=BUFFER_MAXLEN;
     WINDOW_END++;
     WINDOW_END%=BUFFER_MAXLEN;
+    ACK_array[WINDOW_END] = 0;
     int temp = sent_frame;
     sent_frame--;
     printf("Sent_frame: %d -> %d\n", temp, sent_frame);
